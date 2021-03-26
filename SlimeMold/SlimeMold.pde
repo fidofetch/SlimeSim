@@ -24,7 +24,7 @@ float sensor_dist = 12; //Distance the agents look ahead, should almost always b
 float size = 2; //size of the agent
 ////////////////////////////////////////
 
-boolean is_paused = true;
+boolean is_paused = false;
 boolean released = true;
 
 void setup(){

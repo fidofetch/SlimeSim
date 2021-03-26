@@ -25,7 +25,7 @@ float sensor_dist = 12; //Distance the agents look ahead, should almost always b
 float size = 1; //size of the agent
 
 //Life Settings// 
-boolean can_die = true; // causes agents that move too far from others to die out, come back to life if mass surrounds it
+boolean can_die = false; // causes agents that move too far from others to die out, come back to life if mass surrounds it
 int life_amount = 20; //how fast they can die
 ////////////////////////////////////////
 
@@ -33,7 +33,7 @@ boolean is_paused = false;
 boolean released = true;
 
 void setup(){
-  size(800, 800, P2D);
+  size(1000,1000, P2D);
   background(0);
   agents1 = new ArrayList<Agent>(num_agents);
   to_remove = new ArrayList<Agent>();
@@ -47,28 +47,20 @@ void setup(){
 void draw(){
   if(!is_paused){
     //Huge performance hit if these loops are merged
-    for(Agent agent : agents1){
-        agent.render();
-    }
+    fill(agents1.get(0).c);
+    noStroke();
+    
+    loadPixels();
     for(Agent agent : agents1){
         agent.update();
-    }
-    
-    //Pixel manipulation
-    loadPixels();
-    for(int i = 0; i< (width*height); i++){
-        color col = pixels[i];
-        if(col == #000000) continue; //Skip if the pixel is already black
-        int r = (col >> 16) & 0xFF; //Seperate RGB out from the pixel
-        int g = (col >> 8) & 0xFF;
-        int b = col & 0xFF;
-        r = constrain((r-faderate), 0, 255); //Fade out the color, can be used later for multiple agents with different fade rates
-        g = constrain((g-faderate), 0, 255);
-        b = constrain((b-faderate), 0, 255);
-        pixels[i] = color(r, g, b);
-    }
+    }    
+    fade();
     updatePixels();
     filter(blur); //Blur everything
+    
+     for(Agent agent : agents1){
+        agent.render();
+    }
   }
   
   //Basic pause function
@@ -77,4 +69,21 @@ void draw(){
     released = false;
   }
   else released = true;
+}
+
+void fade(){
+  for(int i = 0; i< (width*height); i++){
+        int r = (pixels[i] >> 16) & 0xFF; //Seperate RGB out from the pixel
+        int g = (pixels[i] >> 8) & 0xFF;
+        int b = pixels[i] & 0xFF;
+        if(r+g+b<=0) continue;
+        r = constrain((r-faderate), 0, 255); //Fade out the color, can be used later for multiple agents with different fade rates
+        g = constrain((g-faderate), 0, 255);
+        b = constrain((b-faderate), 0, 255);
+        //pixels[i] = color(r, g, b);
+        int col = (r << 16) ; //Seperate RGB out from the pixel
+        col += (g << 8) ;
+        col += b ;
+        pixels[i] = col;
+    }
 }

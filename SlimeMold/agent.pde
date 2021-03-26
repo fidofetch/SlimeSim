@@ -1,4 +1,4 @@
-public class Agent{
+public class Agent extends Thread{
   float x, y;
   color c;
   float dir;
@@ -23,55 +23,63 @@ public class Agent{
     this.can_die = can_die;
   }
 
-  void update(){
+  void update(){        
+    
+    if(can_die){
+      if(eat()) return;
+    }
+    
+    x += sin(dir)*speed;
+    y += cos(dir)*speed;
+    
+    dir = sense(dir);
+    
+  }
+  
+  boolean eat(){
     //Check for food directly in front of the agent
     color m = get(round(sin(dir)+x+size+1), round(cos(dir)+y+size+1));
     float food = (m >> 16) & 0xFF + (col >> 8) & 0xFF + col & 0xFF;
     if(food<.5){//Threshold
       if(life>0)life--;
     }else if(life<max_life) life++;
-    if(life<=0 && can_die) return;//skip rest of update if dead
-        
-    x += sin(dir)*speed;
-    y += cos(dir)*speed;
-    
-    
-    float new_dir=dir;
-    
-    
+    if(life<=0) return true;//skip rest of update if dead
+    return false;
+  }
+  
+  float sense(float new_dir){
     //Sensors
-    color front = get(round(sin(dir)*sensor_dist+x), round(cos(dir)*sensor_dist+y));
-    color left = get(round(sin(dir+HALF_PI/6)*sensor_dist+x), round(cos(dir+HALF_PI/6)*sensor_dist+y));
-    color right = get(round(sin(dir-HALF_PI/6)*sensor_dist+x), round(cos(dir-HALF_PI/6)*sensor_dist+y));
+    color frontc = -999999999, leftc=-999999999, rightc = -999999999;
+    int front = round((cos(dir)*sensor_dist+y))*width + round((sin(dir)*sensor_dist+x));
+    if(front > 0 && front < width*height) frontc = pixels[front];
+    int left = round((cos(dir+HALF_PI/6)*sensor_dist+y))*width+round((sin(dir+HALF_PI/6)*sensor_dist+x));
+    if(left > 0 && left < width*height) leftc = pixels[left];
+    int right = round((cos(dir-HALF_PI/6)*sensor_dist+y))*width+round((sin(dir-HALF_PI/6)*sensor_dist+x));
+    if(right > 0 && right < width*height) rightc = pixels[right];    
     
     //If there is a stronger signal to the left and right randomly choose a direction
-    if(right > front && left > front){
+    if(rightc > frontc && leftc > frontc){
       new_dir = dir+map(random(0, 5), 0, 5, -HALF_PI/turn_strength, HALF_PI/turn_strength);
     }
-    else if(right>left){
+    else if(rightc>leftc){
       new_dir = dir+map(random(0, 5), 0, 5, -HALF_PI/turn_strength, 0);
     }
       
-    else if(left>right){
+    else if(leftc>rightc){
       new_dir = dir+map(random(0, 5), 0, 5, 0, HALF_PI/turn_strength);
     }
     
     if(x > width || x<0 || y> height || y<0){
-      new_dir =dir+map(random(0, 100), 0, 100, 0, TWO_PI);
+      new_dir =dir+map(random(0, 100), 0, 100, 0, PI);
     }
-    
-    
-    dir = new_dir;
-
-    
+    return new_dir;
   }
+  
   
   
   void render(){
     if(life<=0 && can_die) return;
-    fill(c);
-    noStroke();
-    circle(x, y, size);
+    square(x, y, size);
     
   }
 }

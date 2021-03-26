@@ -22,12 +22,8 @@ public class Agent extends Thread{
     this.max_life = life_amount;
     this.can_die = can_die;
   }
-
+  
   void update(){        
-    
-    if(can_die){
-      if(eat()) return;
-    }
     
     x += sin(dir)*speed;
     y += cos(dir)*speed;

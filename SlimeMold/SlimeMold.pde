@@ -16,7 +16,7 @@ PShader blur;
 /////////////////////////////////////////////////////////
 //Settings
 ////////////////////////////////////////////////////////
-int num_agents = 30000; //Number of agents
+int num_agents = 100000; //Number of agents
 int faderate = 2;  //How fast the old trails fade out
 color col = color(round(random(0, 255)), round(random(0, 255)),round(random(0, 255))); //Color of the simulation
 float speed=3; //Speed the agents move 
@@ -25,8 +25,8 @@ float sensor_dist = 12; //Distance the agents look ahead, should almost always b
 float size = 1; //size of the agent
 
 //Life Settings// 
-boolean can_die = false; // causes agents that move too far from others to die out, come back to life if mass surrounds it
-int life_amount = 20; //how fast they can die
+boolean can_die = true; // causes agents that move too far from others to die out, come back to life if mass surrounds it
+int life_amount = 100; //how fast they can die
 ////////////////////////////////////////
 
 boolean is_paused = false;
@@ -42,6 +42,7 @@ void setup(){
     agents1.add(new Agent(width/2+round(sin(i)*width/random(4,30)), height/2+round(cos(i)*height/random(4,30)), col,speed, turn_strength, sensor_dist, size, facing_direction, life_amount, can_die));
   }  
   blur = loadShader("blur.glsl");
+  //noSmooth();
 }
 
 void draw(){
@@ -51,16 +52,22 @@ void draw(){
     noStroke();
     
     loadPixels();
-    for(Agent agent : agents1){
-        agent.update();
-    }    
+    
+    thread("update");
+    if(can_die){//Pulled out of the update loop for threading
+      for(Agent a : agents1){
+        a.eat();
+      }
+    }
+  
     fade();
     updatePixels();
     filter(blur); //Blur everything
     
-     for(Agent agent : agents1){
+    for(Agent agent : agents1){
         agent.render();
     }
+
   }
   
   //Basic pause function
@@ -86,4 +93,10 @@ void fade(){
         col += b ;
         pixels[i] = col;
     }
+}
+
+void update(){
+     for(Agent agent : agents1){
+      agent.update();
+    }  
 }

@@ -1,7 +1,10 @@
 ArrayList<Agent> agents1;
 PShape rendergroup;
 
+import com.jogamp.opengl.GL;
+
 PShader blur;
+PImage fade;
 
 //////////////////////////////////////////////////////////
 //Presets
@@ -20,19 +23,19 @@ PShader blur;
 int num_agents = 100000; //Number of agents
 int faderate = 2;  //How fast the old trails fade out
 color col = color(round(random(0, 255)), round(random(0, 255)),round(random(0, 255))); //Color of the simulation
-float speed=3; //Speed the agents move 
+float speed=1; //Speed the agents move 
 float turn_strength = 2; //How fast the agents can turn (Higher is slower)
-float sensor_dist = 12; //Distance the agents look ahead, should almost always be larger than speed and size
+float sensor_dist =12; //Distance the agents look ahead, should almost always be larger than speed and size
 float size = 1; //size of the agent
 
 int min_circle = 30;//size of starting circle as ratio of width and height default: 30, 4
 int max_circle = 4;
 
-boolean face_towards_center = false; //Starting facing direction
+boolean face_towards_center = true; //Starting facing direction
 
 //Life Settings// 
 boolean can_die = false; // causes agents that move too far from others to die out, come back to life if mass surrounds it
-int life_amount = 20; //how fast they can die
+int life_amount = 10; //how fast they can die
 
 //System Settings//
 boolean use_threading = true;
@@ -43,6 +46,7 @@ boolean released = true;
 
 void setup(){
   size(1000,1000, P3D);
+  //fullScreen(P3D);
   background(0);
   agents1 = new ArrayList<Agent>(num_agents);
     rendergroup = createShape(GROUP);
@@ -52,72 +56,85 @@ void setup(){
     else facing_direction = random(0, TWO_PI);
     Agent n = new Agent(width/2+round(sin(i)*width/random(max_circle,min_circle)), height/2+round(cos(i)*height/random(max_circle,min_circle)), col,speed, turn_strength, sensor_dist, size, facing_direction, life_amount, can_die);
     agents1.add(n);
-    rendergroup.addChild(n.agent);
   }  
+  
   blur = loadShader("blur.glsl");
-  noSmooth();
+  blur.set("blurSize", 2);
+  blur.set("sigma", 2.0);
+  
+  fade = createImage(width, height, ARGB);
+  blendMode(SUBTRACT);
+  for(int i = 0; i<fade.pixels.length; i++){
+    fade.pixels[i] = color(255, faderate);
+  }
   noStroke();
+  noSmooth();
   hint(DISABLE_DEPTH_TEST);
 }
 
 void draw(){
   if(!is_paused){
-    //Huge performance hit if these loops are merged
-    fill(agents1.get(0).c);
-    noStroke();
-    
+    fade();
     loadPixels();
-    
-    //render();
+    render();
     if(use_threading) thread("update");
     else update();
     
     if(can_die){//Pulled out of the update loop for threading
-      for(Agent a : agents1){
-        a.eat();
-      }
+      if(use_threading) thread("eat");
+      else eat();
     }
-    fade();
     updatePixels();
-    filter(blur); //Blur everything
   }
-  shapeMode(CORNER);
-    shape(rendergroup);
-  shapeMode(CENTER);
   //Basic pause function
   if(keyPressed && key == ' ' && released == true){
     is_paused = !is_paused;
     released = false;
   }
   else released = true;
+  blur();
+}
+
+void blur(){
+    blur.set("horizontalPass", 0);
+    filter(blur); //Blur everything
+    blur.set("horizontalPass", 1);
+    filter(blur); //Blur everything
 }
 
 void fade(){
-  for(int i = 0; i< (width*height); i++){
-        int r = (pixels[i] >> 16) & 0xFF; //Seperate RGB out from the pixel
-        int g = (pixels[i] >> 8) & 0xFF;
-        int b = pixels[i] & 0xFF;
-        if(r+g+b<=0) continue;
-        r = constrain((r-faderate), 0, 255); //Fade out the color, can be used later for multiple agents with different fade rates
-        g = constrain((g-faderate), 0, 255);
-        b = constrain((b-faderate), 0, 255);
-        //pixels[i] = color(r, g, b);
-        int col = (r << 16) ; //Seperate RGB out from the pixel
-        col += (g << 8) ;
-        col += b ;
-        pixels[i] = col;
-    }
+  //for(int i = 0; i< (width*height); i++){
+  //      int r = (pixels[i] >> 16) & 0xFF; //Seperate RGB out from the pixel
+  //      int g = (pixels[i] >> 8) & 0xFF;
+  //      int b = pixels[i] & 0xFF;
+  //      if(r+g+b<=0) continue;
+  //      r = constrain((r-faderate), 0, 255); //Fade out the color, can be used later for multiple agents with different fade rates
+  //      g = constrain((g-faderate), 0, 255);
+  //      b = constrain((b-faderate), 0, 255);
+  //      //pixels[i] = color(r, g, b);
+  //      int col = (r << 16) ; //Seperate RGB out from the pixel
+  //      col += (g << 8) ;
+  //      col += b ;
+  //      pixels[i] = col;
+  //  }
+
+  image(fade, 0, 0);
 }
 
 void update(){
     for(Agent agent : agents1){
-       if(agent.life<=0){
-         agent.agent.setVisible(false);
-         continue;
-       }
        agent.update();
-       agent.render();
-       if(!agent.agent.isVisible()) agent.agent.setVisible(true);
-         
     }      
+}
+
+void render(){
+  for(Agent agent : agents1){
+           agent.render();
+  } 
+}
+
+void eat(){
+  for(Agent a : agents1){
+        a.eat();
+      }
 }

@@ -1,5 +1,5 @@
 ArrayList<Agent> agents1;
-ArrayList<Agent> to_remove;
+PShape rendergroup;
 
 PShader blur;
 
@@ -13,6 +13,7 @@ PShader blur;
 //Currents: num_agents 40k, faderate = 1, speed = 3, turn_strength = 4, sensor_dist = 100, size = 1, can_die = false
 //Acient writings: num_agents 5k, faderate = 1, speed = .3, turn_strength = 4, sensor_dist = 3, size = 2
 //Slow Growth: num_agents 30 k, faderate = 1, speed = .3, turn_strength = 5, sensor_dist =3, size = 2
+//City Map: num_agents 200, faderate = 0, speed = 2, turn_strength = 15, sensor_dist = 10, size = 1, min_circle = 20, max_circle = 1, face_towards_center = false, can_die = false
 /////////////////////////////////////////////////////////
 //Settings
 ////////////////////////////////////////////////////////
@@ -24,25 +25,39 @@ float turn_strength = 2; //How fast the agents can turn (Higher is slower)
 float sensor_dist = 12; //Distance the agents look ahead, should almost always be larger than speed and size
 float size = 1; //size of the agent
 
+int min_circle = 30;//size of starting circle as ratio of width and height default: 30, 4
+int max_circle = 4;
+
+boolean face_towards_center = false; //Starting facing direction
+
 //Life Settings// 
-boolean can_die = true; // causes agents that move too far from others to die out, come back to life if mass surrounds it
-int life_amount = 100; //how fast they can die
+boolean can_die = false; // causes agents that move too far from others to die out, come back to life if mass surrounds it
+int life_amount = 20; //how fast they can die
+
+//System Settings//
+boolean use_threading = true;
 ////////////////////////////////////////
 
 boolean is_paused = false;
 boolean released = true;
 
 void setup(){
-  size(1000,1000, P2D);
+  size(1000,1000, P3D);
   background(0);
   agents1 = new ArrayList<Agent>(num_agents);
-  to_remove = new ArrayList<Agent>();
+    rendergroup = createShape(GROUP);
   for(int i = 0; i<num_agents; i++){
-    float facing_direction = i-random(HALF_PI, PI+HALF_PI); //Turn agents towards center of ring, with slight variation
-    agents1.add(new Agent(width/2+round(sin(i)*width/random(4,30)), height/2+round(cos(i)*height/random(4,30)), col,speed, turn_strength, sensor_dist, size, facing_direction, life_amount, can_die));
+    float facing_direction;
+    if(face_towards_center) facing_direction = i-random(HALF_PI, PI+HALF_PI); //Turn agents towards center of ring, with slight variation
+    else facing_direction = random(0, TWO_PI);
+    Agent n = new Agent(width/2+round(sin(i)*width/random(max_circle,min_circle)), height/2+round(cos(i)*height/random(max_circle,min_circle)), col,speed, turn_strength, sensor_dist, size, facing_direction, life_amount, can_die);
+    agents1.add(n);
+    rendergroup.addChild(n.agent);
   }  
   blur = loadShader("blur.glsl");
-  //noSmooth();
+  noSmooth();
+  noStroke();
+  hint(DISABLE_DEPTH_TEST);
 }
 
 void draw(){
@@ -53,23 +68,22 @@ void draw(){
     
     loadPixels();
     
-    thread("update");
+    //render();
+    if(use_threading) thread("update");
+    else update();
+    
     if(can_die){//Pulled out of the update loop for threading
       for(Agent a : agents1){
         a.eat();
       }
     }
-  
     fade();
     updatePixels();
     filter(blur); //Blur everything
-    
-    for(Agent agent : agents1){
-        agent.render();
-    }
-
   }
-  
+  shapeMode(CORNER);
+    shape(rendergroup);
+  shapeMode(CENTER);
   //Basic pause function
   if(keyPressed && key == ' ' && released == true){
     is_paused = !is_paused;
@@ -96,7 +110,14 @@ void fade(){
 }
 
 void update(){
-     for(Agent agent : agents1){
-      agent.update();
-    }  
+    for(Agent agent : agents1){
+       if(agent.life<=0){
+         agent.agent.setVisible(false);
+         continue;
+       }
+       agent.update();
+       agent.render();
+       if(!agent.agent.isVisible()) agent.agent.setVisible(true);
+         
+    }      
 }

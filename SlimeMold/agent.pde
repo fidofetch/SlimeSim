@@ -53,7 +53,7 @@ public class Agent extends Thread{
     //Check for food directly in front of the agent
     //color m = get(round(sin(dir)+x+size+1), round(cos(dir)+y+size+1));
     int face = round((cos(dir)+y+size+1))*width + round(-(sin(dir)+x+size+1));
-    if(face > 0 && face < width*height) m = pixels[face];
+    if(face > 0 && face < width*height) m = pgRead.pixels[face];
     else return;
     float food = ((m >> 16) & 0xFF) + ((m >> 8) & 0xFF) + (m & 0xFF);
     if(food<.5){//Threshold 
@@ -70,14 +70,14 @@ public class Agent extends Thread{
   float sense(float new_dir){
     //Sensors
     color frontc =0, leftc=0, rightc =0;
-    int front = round((cos(dir)*sensor_dist+y))*width + round((sin(dir)*sensor_dist+x));
-    if(front > 0 && front < width*height) frontc = pixels[front];
+    int front = round((cos(dir)*sensor_dist+y))*width + round((sin(dir)*sensor_dist+x)*-x_symmetry_mode);
+    if(front > 0 && front < width*height) frontc = pgRead.pixels[front];
     front = ((frontc >> 16) & 0xFF) + ((frontc >> 8) & 0xFF) + (frontc & 0xFF);
-    int left = round((cos(dir+HALF_PI/6)*sensor_dist+y))*width+round((sin(dir+HALF_PI/6)*sensor_dist+x));
-    if(left > 0 && left < width*height) leftc = pixels[left];
+    int left = round((cos(dir+HALF_PI/sensor_width)*sensor_dist+y))*width+round((sin(dir+HALF_PI/sensor_width)*sensor_dist+x)*-x_symmetry_mode);
+    if(left > 0 && left < width*height) leftc = pgRead.pixels[left];
     left = ((leftc >> 16) & 0xFF) + ((leftc >> 8) & 0xFF) + (leftc & 0xFF);
-    int right = round((cos(dir-HALF_PI/6)*sensor_dist+y))*width+round((sin(dir-HALF_PI/6)*sensor_dist+x));
-    if(right > 0 && right < width*height) rightc = pixels[right];    
+    int right = round((cos(dir-HALF_PI/sensor_width)*sensor_dist+y))*width+round((sin(dir-HALF_PI/sensor_width)*sensor_dist+x)*-x_symmetry_mode);
+    if(right > 0 && right < width*height)rightc = pgRead.pixels[right];    
     right = ((rightc >> 16) & 0xFF) + ((rightc >> 8) & 0xFF) + (rightc & 0xFF);
     //If there is a stronger signal to the left and right randomly choose a direction
     if(right > front && left > front){
@@ -105,11 +105,8 @@ public class Agent extends Thread{
   }
   
   void render(){
-        //agent.translate(x-oldX, y-oldY);
-        //oldX = x;
-        //oldY = y;
         int pix = (int)(y)*width+(int)(x);
         if(pix>0 && pix <width*height && c!=0)
-          pixels[pix] = c;
+          pgDraw.pixels[pix] = c;
   }
 }

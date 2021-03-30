@@ -31,11 +31,6 @@ public class Agent extends Thread{
     this.max_life = life_amount;
     this.can_die = can_die;
     
-    //agent = createShape(RECT, 0, 0, size, size);
-    //agent.setStroke(0);
-    //agent.setStrokeWeight(0);
-    //agent.setFill(c);
-    //agent.translate(x,y);
   }
   
   void update(){        
@@ -49,10 +44,11 @@ public class Agent extends Thread{
   }
   
   void eat(){
+    if(!revive && life<=0) return;
     color m = 0;
     //Check for food directly in front of the agent
     //color m = get(round(sin(dir)+x+size+1), round(cos(dir)+y+size+1));
-    int face = round((cos(dir)+y+size+1))*width + round(-(sin(dir)+x+size+1));
+    int face = (int)(cos(dir)*(size+1)+y)*width + (int)(sin(dir)*(size+1)+x);
     if(face > 0 && face < width*height) m = pgRead.pixels[face];
     else return;
     float food = ((m >> 16) & 0xFF) + ((m >> 8) & 0xFF) + (m & 0xFF);
@@ -73,10 +69,10 @@ public class Agent extends Thread{
     int front = round((cos(dir)*sensor_dist+y))*width + round((sin(dir)*sensor_dist+x)*-x_symmetry_mode);
     if(front > 0 && front < width*height) frontc = pgRead.pixels[front];
     front = ((frontc >> 16) & 0xFF) + ((frontc >> 8) & 0xFF) + (frontc & 0xFF);
-    int left = round((cos(dir+HALF_PI/sensor_width)*sensor_dist+y))*width+round((sin(dir+HALF_PI/sensor_width)*sensor_dist+x)*-x_symmetry_mode);
+    int left = round((cos(dir+(HALF_PI/sensor_width))*sensor_dist+y))*width+round((sin(dir+(HALF_PI/sensor_width))*sensor_dist+x)*-x_symmetry_mode);
     if(left > 0 && left < width*height) leftc = pgRead.pixels[left];
     left = ((leftc >> 16) & 0xFF) + ((leftc >> 8) & 0xFF) + (leftc & 0xFF);
-    int right = round((cos(dir-HALF_PI/sensor_width)*sensor_dist+y))*width+round((sin(dir-HALF_PI/sensor_width)*sensor_dist+x)*-x_symmetry_mode);
+    int right = round((cos(dir-(HALF_PI/sensor_width))*sensor_dist+y))*width+round((sin(dir-(HALF_PI/sensor_width))*sensor_dist+x)*-x_symmetry_mode);
     if(right > 0 && right < width*height)rightc = pgRead.pixels[right];    
     right = ((rightc >> 16) & 0xFF) + ((rightc >> 8) & 0xFF) + (rightc & 0xFF);
     //If there is a stronger signal to the left and right randomly choose a direction
@@ -84,12 +80,12 @@ public class Agent extends Thread{
       return dir+random(-HALF_PI/turn_strength, HALF_PI/turn_strength);
     }
     else if(right>left){
-      return dir+map(random(0, 5), 0, 5, -HALF_PI/turn_strength, 0);
+      return dir+random(-HALF_PI/turn_strength, 0);
       //return dir-HALF_PI/turn_strength;
     }
       
     else if(left>right){
-      return dir+map(random(0, 5), 0, 5, 0, HALF_PI/turn_strength);
+      return dir+random(0, HALF_PI/turn_strength);
       //return dir+HALF_PI/turn_strength;
     }
     if(x > width || x<0 || y> height || y<0){

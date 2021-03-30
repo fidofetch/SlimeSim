@@ -22,15 +22,15 @@ PGraphics pgRead;
 /////////////////////////////////////////////////////////
 //Settings
 ////////////////////////////////////////////////////////
-int num_agents = 40000; //Number of agents
-int faderate = 3;  //How fast the old trails fade out
-color col1 = color(190, 60, 20); //Color of the simulation, set to 0 for random color
+int num_agents = 1000000; //Number of agents
+int faderate = 8;  //How fast the old trails fade out
+color col1 = color(0); //Color of the simulation, set to 0 for random color
 color col2 = color(0); //Set to 0 for only col1
 float speed=2; //Speed the agents move 
 float turn_strength = 2; //How fast the agents can turn (Higher is slower)
 float sensor_dist =12; //Distance the agents look ahead, should almost always be larger than speed and size
-float size = 1; //size of the agent
-float sensor_width = 20; //How far to the sides the agents can see higher is narrower
+int size = 1;//Figure out how to reimplement size using pixel calls
+float sensor_width = 6; //How far to the sides the agents can see higher is narrower
 
 int min_circle = 30;//size of starting circle as ratio of width and height default: 30, 4
 int max_circle = 4;
@@ -40,13 +40,15 @@ boolean face_towards_center = true; //Starting facing direction
 int x_symmetry_mode = -1; //1 on, -1 off
 //Life Settings// 
 boolean can_die = true; // causes agents that move too far from others to die out, come back to life if mass surrounds it
-int life_amount = 10; //how fast they can die
+boolean revive = true; // agents that are dead will come back to life if they are surrounded again
+int life_amount = 1; //how fast they can die
 
 //System Settings//
 boolean fullscreen = true;
 boolean use_threading = true;
-float blur_strength = 5;
+float blur_strength = 9;
 float blur_sigma = 5.0;
+int frame_rate = 120;
 ////////////////////////////////////////
 
 boolean is_paused = false;
@@ -55,6 +57,7 @@ boolean released = true;
 void setup(){
   size(1000,1000, P3D);
   //fullScreen(P3D);
+  frameRate(frame_rate);
   background(0);
   agents1 = new ArrayList<Agent>(num_agents);
   if(col1==color(0))col1 = color(round(random(0, 255)), round(random(0, 255)),round(random(0, 255)));
@@ -80,7 +83,7 @@ void setup(){
   pgRead = createGraphics(width, height);
   
   fade = createImage(width, height, ARGB);
-  //blendMode(SUBTRACT);
+  
   for(int i = 0; i<fade.pixels.length; i++){
     fade.pixels[i] = color(255, faderate);
   }
@@ -96,23 +99,26 @@ void draw(){
   pgRead.endDraw();
   
   if(!is_paused){
+    
     blendMode(SUBTRACT);
     fade();
     blur();
-    pgRead.loadPixels();
+
     pgDraw.beginDraw();
+    pgDraw.blendMode(ADD);
     pgDraw.background(0, 0, 0, 0);
     pgDraw.loadPixels();
     render();
     pgDraw.updatePixels();
     pgDraw.endDraw();
+    
+    pgRead.loadPixels();
     if(use_threading) thread("update");
     else update();
     
-    if(can_die){//Pulled out of the update loop for threading
-      if(use_threading) thread("eat");
-      else eat();
-    }
+    blendMode(BLEND);
+    image(pgDraw, 0, 0, width, height);
+    
   }
   //Basic pause function
   if(keyPressed && key == ' ' && released == true){
@@ -120,8 +126,6 @@ void draw(){
     released = false;
   }
   else released = true;
-  blendMode(BLEND);
-  image(pgDraw, 0, 0, width, height);
 }
 
 void blur(){
@@ -138,6 +142,7 @@ void fade(){
 void update(){
     for(Agent agent : agents1){
        agent.update();
+       if(can_die) agent.eat();
     }
 }
 
@@ -145,10 +150,4 @@ void render(){
   for(Agent agent : agents1){
            if(agent.life>=0)agent.render();
   } 
-}
-
-void eat(){
-  for(Agent a : agents1){
-        a.eat();
-      }
 }

@@ -76,17 +76,24 @@ public class Agent extends Thread{
     if(right > 0 && right < width*height)rightc = pgRead.pixels[right];    
     right = ((rightc >> 16) & 0xFF) + ((rightc >> 8) & 0xFF) + (rightc & 0xFF);
     //If there is a stronger signal to the left and right randomly choose a direction
-    if(right > front && left > front){
+    if(chaotic){
+      if(right >= front && left >= front){
       return dir+random(-HALF_PI/turn_strength, HALF_PI/turn_strength);
+      }
     }
-    else if(right>left){
-      return dir+random(-HALF_PI/turn_strength, 0);
-      //return dir-HALF_PI/turn_strength;
+    else{
+      if(right > front && left > front){
+      return dir+random(-HALF_PI/turn_strength, HALF_PI/turn_strength);
+      }
+    }
+    if(right>left){
+      if(chaotic) return dir+random(-HALF_PI/turn_strength, 0);
+      else return dir-HALF_PI/turn_strength;
     }
       
-    else if(left>right){
-      return dir+random(0, HALF_PI/turn_strength);
-      //return dir+HALF_PI/turn_strength;
+    if(left>right){
+      if(chaotic) return dir+random(0, HALF_PI/turn_strength);
+      else return dir+HALF_PI/turn_strength;
     }
     if(x > width || x<0 || y> height || y<0){
       return dir+random(0, PI);

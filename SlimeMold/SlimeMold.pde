@@ -8,22 +8,22 @@ PImage fade;
 PGraphics pgDraw;
 PGraphics pgRead;
 
-//////////////////////////////////////////////////////////
 //Presets
-//Fireworks:num_agents 10k faderate = 1, speed = 1, turn_strength = 3, sensor_dist = 45, size = 2
-//Sparks: num_agents 50k faderate = 6, speed = 3, turn_strength = 8, sensor_dist = 45, size = 2, can_die = true, life_amount = 10
-//Electricity: num_agents 5k faderate = 2, speed = 8, turn_strength = 3, sensor_dist = 12, size = 2
-//Shag Carpet: num_agents 20k, faderate = 5, speed = 2, turn_strength = 20, sensor_dist = 12, size = 7
-//Mold: num_agents 30k, faderate = 3, speed = 2, turn_strength = 2, sensor_dist = 12, size = 1, can_die = true or false //Both simulations are interesting
-//Currents: num_agents 40k, faderate = 1, speed = 3, turn_strength = 4, sensor_dist = 100, size = 1, can_die = false
-//Acient writings: num_agents 5k, faderate = 1, speed = .3, turn_strength = 4, sensor_dist = 3, size = 2
-//Slow Growth: num_agents 30 k, faderate = 1, speed = .3, turn_strength = 5, sensor_dist =3, size = 2
-//City Map: num_agents 200, faderate = 0, speed = 2, turn_strength = 15, sensor_dist = 10, size = 1, min_circle = 20, max_circle = 1, face_towards_center = false, can_die = false
+//0: nothing
+//1: fireworks
+//2: Sparks
+//3: Electricity
+//4: Mold
+//5: Currents
+//6: City Map
+//7: Mold2
+//Enter a preset to overwrite settings 0 will not overwrite, colors are not overwritten
+int preset = 7;
 /////////////////////////////////////////////////////////
 //Settings
 ////////////////////////////////////////////////////////
-int num_agents = 1000000; //Number of agents
-int faderate = 8;  //How fast the old trails fade out
+int num_agents = 100000; //Number of agents
+int faderate = 5;  //How fast the old trails fade out
 color col1 = color(0); //Color of the simulation, set to 0 for random color
 color col2 = color(0); //Set to 0 for only col1
 float speed=2; //Speed the agents move 
@@ -32,8 +32,10 @@ float sensor_dist =12; //Distance the agents look ahead, should almost always be
 int size = 1;//Figure out how to reimplement size using pixel calls
 float sensor_width = 6; //How far to the sides the agents can see higher is narrower
 
-int min_circle = 30;//size of starting circle as ratio of width and height default: 30, 4
-int max_circle = 4;
+boolean chaotic = true; //Change how agents act when turning, false agents will go straight, true agents will steer randomly
+
+int min_circle = 50;//size of starting circle as ratio of width and height default: 30, 4
+int max_circle = 40;
 
 boolean face_towards_center = true; //Starting facing direction
 
@@ -44,10 +46,9 @@ boolean revive = true; // agents that are dead will come back to life if they ar
 int life_amount = 1; //how fast they can die
 
 //System Settings//
-boolean fullscreen = true;
 boolean use_threading = true;
-float blur_strength = 9;
-float blur_sigma = 5.0;
+float blur_strength = 2; //Not working, Shaders seem to preload so variables do not work
+float blur_sigma = 2.0;
 int frame_rate = 120;
 ////////////////////////////////////////
 
@@ -55,6 +56,9 @@ boolean is_paused = false;
 boolean released = true;
 
 void setup(){
+  
+  preset(preset);
+  
   size(1000,1000, P3D);
   //fullScreen(P3D);
   frameRate(frame_rate);
@@ -83,10 +87,11 @@ void setup(){
   pgRead = createGraphics(width, height);
   
   fade = createImage(width, height, ARGB);
-  
+  colorMode(RGB, 500);
   for(int i = 0; i<fade.pixels.length; i++){
-    fade.pixels[i] = color(255, faderate);
+    fade.pixels[i] = color(500, faderate);
   }
+  colorMode(RGB);
   noStroke();
   noSmooth();
   hint(DISABLE_DEPTH_TEST);
@@ -99,10 +104,6 @@ void draw(){
   pgRead.endDraw();
   
   if(!is_paused){
-    
-    blendMode(SUBTRACT);
-    fade();
-    blur();
 
     pgDraw.beginDraw();
     pgDraw.blendMode(ADD);
@@ -116,8 +117,11 @@ void draw(){
     if(use_threading) thread("update");
     else update();
     
+    blendMode(SUBTRACT);
+    fade();
     blendMode(BLEND);
     image(pgDraw, 0, 0, width, height);
+    blur();
     
   }
   //Basic pause function
